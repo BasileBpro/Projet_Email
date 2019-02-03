@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import csv
 import smtplib
 from email.mime.text import MIMEText as text
+import email.utils
 import threading
 
 #Lecture fichier
@@ -45,12 +46,14 @@ def Write_File_Final(namefile, text):
     my_file.close()
 
 def Verif_Mail(name_Mail):
+    #VERIFICATION DU MAIL
     if( "@" in name_Mail and (name_Mail.endswith(".com") or name_Mail.endswith(".fr"))):
         return True
     else:
         return False
 
 def Verif_URL(name_URL):
+    #VERIFIE L URL ENTRE
    if("http://" in name_URL or "https://" in name_URL):
        hostname = "ping" + name_URL
        if(os.system(hostname) == 0):
@@ -60,6 +63,7 @@ def Verif_URL(name_URL):
    else:
        return False
 def ping_URL(name_URL):
+    #PING L URL
     domaine = Recup_Domaine(name_URL)
     domaine_finale = "ping " + domaine
     if (os.system(domaine_finale) == 0):
@@ -72,6 +76,7 @@ def Recup_Domaine(name_URL):
     return infos[1]
 
 def Recup_List_Mail(File_Name):
+    #RECUPERE LES MAILS D UN FICHIER
     global namefichier
     f = open(File_Name, "r")
     lignes = f.readlines()
@@ -83,6 +88,7 @@ def Recup_List_Mail(File_Name):
     return list_True
 
 def Verif_List_Mail(liste1, liste):
+    #VERIFIE LES MAILS DE LA LISTE
     global Ress
     listeTempo = []
     """f = open(File_Name, "r")
@@ -102,6 +108,7 @@ def Verif_List_Mail(liste1, liste):
     return None
 
 def Suppr_Doublons(liste1, liste):
+    #SUPPRIME LES DOUBLONS DE LA LISTE EN VIDANT LA LISTBOX ET EN REMETTANT LES VALEURS APRES LE TRI
     global Ress
     liste_sans = set(liste1)
     liste_sans = list(liste_sans)
@@ -112,24 +119,23 @@ def Suppr_Doublons(liste1, liste):
     return liste_sans
 
 def Recup_ListBox(listeBoxAtm):
+    #RECUPERATION DE LA LISTEBOX
     listActuelle = []
     for i in range(0,listeBoxAtm.size()):
         listActuelle.append(listeBoxAtm.get(i))
     return listActuelle
 
-def Suppri_Elem(liste, name):
-    if(name in liste):
-        liste.remove(name)
-    return liste
-
 def ImportationCSV(NameCSVBis):
+    #IMPORTATION D UN FICHIER CSV AVEC OUVERTURE DE LA FENETRE 2
     Fenetre2(NameCSVBis, False)
 
 def ImportationURL(NameURLBis):
+    #IMPORTATION DE MAIL A PARTIR D UN SITE WEB ET OUVERTURE DE LA FENETRE 2
     Url = Crawler(NameURLBis)
     Fenetre2(Url, False)
 
 def Crawler(URL):
+    #PERMET DE RECUPERER LES ADRESSES MAILS CONTENUS DANS LE HREF ET STOCK DANS UN FICHIER EPEHEMERE
     """requete = requests.get("http://univcergy.phpnet.org/python/mail.html")"""
     requete = requests.get(URL)
     page = requete.content
@@ -144,18 +150,19 @@ def Crawler(URL):
     return finalmail
 
 def SupprMail():
-    global namecsv
+    #SUPPRIME L ELEMENT SELECTIONNE
     global liste
     global Ress
     line = liste.curselection()[0]
     del Ress[line]
     liste.delete(line)
 
-def ThreadMail(MyMail, Object, MyPass, MyMessage, HisMail):
-    threading.Thread(target=Envoi_Mail, args=(MyMail, Object, MyPass, MyMessage, HisMail)).start()
+def ThreadMail(Expe, MyMail, Object, MyPass, MyMessage, HisMail):
+    #CREATION D UN THREAD POUR L ENVOI DES MAILS
+    threading.Thread(target=Envoi_Mail, args=(Expe, MyMail, Object, MyPass, MyMessage, HisMail)).start()
 
 
-def Envoi_Mail(MyMail, Object, MyPass, MyMessage, HisMail):
+def Envoi_Mail(Expe, MyMail, Object, MyPass, MyMessage, HisMail):
     global Ress
     ResultatMail = ""
     global fichierDepart
@@ -163,19 +170,26 @@ def Envoi_Mail(MyMail, Object, MyPass, MyMessage, HisMail):
     server.starttls()
     server.login(MyMail, MyPass)
     msg = text(MyMessage)
+    #CHANGEMENT DE L EXPEDITEUR
+    msg['From'] = email.utils.formataddr((Expe,'test'))
+    #CHANGEMENT DE L OBJET
     msg['Subject'] = Object
     for i in range(0, len(Ress)):
         ResultatMail = ResultatMail + Ress[i]
+    #SAUVEGARDE DU FICHIER AVEC LES NOUVEAUX MAILS AJOUTES
     Write_File_Final(fichierDepart, ResultatMail)
 
+    #ENVOI D UN MAIL TEST
     if HisMail != "":
         server.sendmail(MyMail, HisMail, msg.as_string())
+    #ENVOI A UNE LISTE DE MAIL
     else:
         for i in range(0, len(Ress)):
             server.sendmail(MyMail, Ress[i], msg.as_string())
     server.quit()
 
 def Fenetre2(NameCampagne, first):
+    #CREATION DE LA FENETRE ET VERIFICATION DE SI L ON PROVIENT DE LA PAGE 1 OU NON
     global namecsv
     namecsv = NameCampagne
     global fichierDepart
@@ -308,9 +322,9 @@ def Fenetre6(Expe, Obj, Msg):
     MailText.place(relx=0.5, rely=0.2, anchor=CENTER, width=150, height=35)
     Test = Label(fenetre6, text="Test", font="Arial 16")
     Test.place(relx=0.2, rely=0.4, anchor=CENTER)
-    TestButton = Button(fenetre6, text="Test Envoi", font="Arial 16", command=lambda: ThreadMail("testpythonmailexo@gmail.com",Obj,"testpythonexo", Msg, MailText.get()))
+    TestButton = Button(fenetre6, text="Test Envoi", font="Arial 16", command=lambda: ThreadMail(Expe, "testpythonmailexo@gmail.com",Obj,"testpythonexo", Msg, MailText.get()))
     TestButton.place(relx=0.5, rely=0.4, anchor=CENTER)
-    SendList = Button(fenetre6, text="Envoi à la liste", font="Arial 16", command=lambda: ThreadMail("testpythonmailexo@gmail.com",Obj,"testpythonexo", Msg, MailText.get()))
+    SendList = Button(fenetre6, text="Envoi à la liste", font="Arial 16", command=lambda: ThreadMail(Expe, "testpythonmailexo@gmail.com",Obj,"testpythonexo", Msg, MailText.get()))
     SendList.place(relx=0.5, rely=0.7, anchor=CENTER)
 
 #IHM
